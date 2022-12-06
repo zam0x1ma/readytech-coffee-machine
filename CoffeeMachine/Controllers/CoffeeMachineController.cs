@@ -2,6 +2,7 @@ using CoffeeMachine.ActionResults;
 using CoffeeMachine.Data;
 using CoffeeMachine.Dtos;
 using CoffeeMachine.Providers;
+using CoffeeMachine.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CoffeeMachine.Controllers;
@@ -12,18 +13,21 @@ public class CoffeeMachineController : ControllerBase
     private readonly ILogger<CoffeeMachineController> _logger;
     private readonly ICoffeeMachineRepository _repository;
     private readonly IDateTimeProvider _dateTimeProvider;
+    private readonly IExternalWeatherService _externalWeatherService;
 
     public CoffeeMachineController(ILogger<CoffeeMachineController> logger,
         ICoffeeMachineRepository repository,
-        IDateTimeProvider dateTimeProvider)
+        IDateTimeProvider dateTimeProvider,
+        IExternalWeatherService externalWeatherService)
     {
         _logger = logger;
         _repository = repository;
         _dateTimeProvider = dateTimeProvider;
+        _externalWeatherService = externalWeatherService;
     }
 
     [HttpGet("brew-coffee")]
-    public ActionResult<CoffeeMachineResponseDto> BrewCoffee()
+    public async Task<ActionResult<CoffeeMachineResponseDto>> BrewCoffee()
     {
         var today = _dateTimeProvider.Now;
 
@@ -41,18 +45,20 @@ public class CoffeeMachineController : ControllerBase
 
             return new StatusCodeWithEmptyBodyResult(StatusCodes.Status503ServiceUnavailable);
         }
-        else
+
+        coffeeMachine.Serve();
+        _repository.SaveChanges();
+
+        var currentTemperatureInWellington = await _externalWeatherService.GetCurrentTemperatureInWellington();
+
+        var response = new CoffeeMachineResponseDto
         {
-            coffeeMachine.Serve();
-            _repository.SaveChanges();
+            Message = currentTemperatureInWellington > 30
+                ? "Your refreshing iced coffee is ready"
+                : "Your piping hot coffee is ready",
+            Prepared = DateTime.Now
+        };
 
-            var response = new CoffeeMachineResponseDto
-            {
-                Message = "Your piping hot coffee is ready",
-                Prepared = DateTime.Now
-            };
-
-            return Ok(response);
-        }
+        return Ok(response);
     }
 }

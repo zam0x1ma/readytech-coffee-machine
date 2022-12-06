@@ -1,5 +1,6 @@
 using CoffeeMachine.Data;
 using CoffeeMachine.Providers;
+using CoffeeMachine.Services;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -9,6 +10,7 @@ builder.Services.AddDbContext<AppDbContext>(opt =>
 
 builder.Services.AddScoped<ICoffeeMachineRepository, CoffeeMachineRepository>();
 builder.Services.AddScoped<IDateTimeProvider, DateTimeProvider>();
+builder.Services.AddScoped<IExternalWeatherService, ExternalWeatherService>();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
